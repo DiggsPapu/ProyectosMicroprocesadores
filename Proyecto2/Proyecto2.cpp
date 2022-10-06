@@ -4,6 +4,7 @@
  * PROYECTO 2: PROGRAMA QUE DEVUELVE EL DETERMINANTE, LA MATRIZ TRANSPUESTA, INVERSA Y ADJUNTA
  * Roberto Rios 20979
  * Diego Alonzo 20172
+ * Daniel Cabrera 20289
  */ 
 // Importacion de librerias
 #include <unistd.h>
@@ -73,13 +74,41 @@ void* calculateTranspuesta(void* arg){
     return (void*) newM;
 }
 // FIN DE SECCION TRANSPUESTA
+
+// SECCION DE ADJUNTA 
+void* calculateAdjunta(void* arg)
+{
+    
+    Matrix localM = *(Matrix*) arg;
+    Matrix *matrizAdj = (Matrix*) malloc(sizeof(Matrix));
+
+    matrizAdj->matriz[0][0] = ((localM.matriz[1][1] * localM.matriz[2][2]) - (localM.matriz[2][1] * localM.matriz[1][2]));
+    matrizAdj->matriz[0][1] = -((localM.matriz[1][0] * localM.matriz[2][2]) - (localM.matriz[2][0] * localM.matriz[1][2]));
+    matrizAdj->matriz[0][2] = ((localM.matriz[1][0] * localM.matriz[2][1]) - (localM.matriz[2][0] * localM.matriz[1][1]));
+
+    matrizAdj->matriz[1][0] = -((localM.matriz[0][1] * localM.matriz[2][2]) - (localM.matriz[2][1] * localM.matriz[0][2]));
+    matrizAdj->matriz[1][1] = ((localM.matriz[0][0] * localM.matriz[2][2]) - (localM.matriz[2][0] * localM.matriz[0][2]));
+    matrizAdj->matriz[1][2] = -((localM.matriz[0][0] * localM.matriz[2][1]) - (localM.matriz[2][0] * localM.matriz[0][1]));
+
+    matrizAdj->matriz[2][0] = ((localM.matriz[0][1] * localM.matriz[1][2]) - (localM.matriz[1][1] * localM.matriz[0][2]));
+    matrizAdj->matriz[2][1] = -((localM.matriz[0][0] * localM.matriz[1][2]) - (localM.matriz[1][0] * localM.matriz[0][2]));
+    matrizAdj->matriz[2][2] = ((localM.matriz[0][0] * localM.matriz[1][1]) - (localM.matriz[1][0] * localM.matriz[0][1]));
+	
+
+    return (void*) matrizAdj; 
+} 
+// FIN DE SECCION ADJUNTA
+
+
 int main()
 {
     pthread_t tDeterminant;
     pthread_t tTranspuest;
+    pthread_t tAdjacent;
     Matrix matrixInput; 
     int *determinant;
     Matrix *trans;
+    Matrix *adj;
     // Ingreso de la matriz
     cout << "Ingrese la matriz de 3x3: \n"; 
     for (int i = 0; i < 3; i++)
@@ -100,6 +129,10 @@ int main()
            perror("Failed to create the thread\n");
            return 1;
     }
+    if  (pthread_create(&tAdjacent, NULL, &calculateAdjunta, (void*)&matrixInput)!=0){ //In case creating threads fail.
+           perror("Failed to create the thread\n");
+           return 1;
+    }
     if (pthread_join( tDeterminant, (void **) &determinant ) != 0 ){ //In case the join fails
         perror("Failed to join the thread\n");
         return 2;
@@ -108,7 +141,12 @@ int main()
         perror("Failed to join the thread\n");
         return 2;
     }
+    if (pthread_join( tAdjacent, (void **) &adj ) != 0 ){ //In case the join fails
+        perror("Failed to join the thread\n");
+        return 2;
+    }
     cout << "Determinante: " << *determinant << endl;
+    
     // IMPRESION DE MATRIZ NORMAL
     // for (int i = 0; i < 3; i++)
     // {
@@ -127,6 +165,16 @@ int main()
     //         cout << trans->matriz[i][k];
     //     }
     //     cout<<endl;
-    // } 
+    // }
+    // IMPRESION DE MATRIZ ADJUNTA
+    // for (int i = 0; i < 3; i++)
+    // {
+    //     for (int j = 0; j < 3; j++)
+    //     {
+    //         cout << adj->matriz[i][j];
+    //     }
+    //     cout<<endl;
+    // }  
+    
     return 0;
 }
