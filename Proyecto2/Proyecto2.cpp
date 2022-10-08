@@ -56,6 +56,7 @@ void* calculateDeterminant(void* arg){
     return NULL;
 }
 // FIN SECCION DE CALCULO DE DETERMINANTE
+
 // SECCION DE TRANSPUESTA 
 void* calculateTranspuesta(void* arg){
     Matrix *localM = (Matrix*) arg;
