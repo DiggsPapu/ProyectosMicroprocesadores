@@ -10,32 +10,34 @@
 #include <unistd.h>
 #include <iostream>
 #include <pthread.h>
+#include <semaphore.h>
 using namespace std;
-pthread_mutex_t lock;
+sem_t determinanteSem;
 struct Matrix
 {
     int matriz[3][3];
+    int determinant = 0;
+    int transpuest[3][3];
+    int adj[3][3];
+    int inv[3][3];
 };
 // SECCION DE CALCULO DE DETERMINANTE
 void* determinantFirst(void* arg){
-    sleep(1);
     Matrix localM = *(Matrix*) arg;
-    int first = localM.matriz[0][0]*(localM.matriz[1][1]*localM.matriz[2][2]-localM.matriz[2][1]*localM.matriz[1][2]);
-    *(int*) arg = first;
+    localM.determinant+= localM.matriz[0][0]*(localM.matriz[1][1]*localM.matriz[2][2]-localM.matriz[2][1]*localM.matriz[1][2]);
+    sem_wait(&determinanteSem);
     return (void*) arg;
 }
 void* determinantSecond(void* arg){
-    sleep(1);
     Matrix localM = *(Matrix*) arg;
-    int second = (-1)*localM.matriz[0][1]*(localM.matriz[1][0]*localM.matriz[2][2]-localM.matriz[2][0]*localM.matriz[1][2]);
-    *(int*) arg = second; 
+    localM.determinant += (-1)*localM.matriz[0][1]*(localM.matriz[1][0]*localM.matriz[2][2]-localM.matriz[2][0]*localM.matriz[1][2]);
+    sem_wait(&determinanteSem);
     return (void*) arg; 
 }
 void* determinantThird(void* arg){
-    sleep(1);
     Matrix localM = *(Matrix*) arg;
-    int third = localM.matriz[0][2]*(localM.matriz[1][0]*localM.matriz[2][1]-localM.matriz[2][0]*localM.matriz[1][1]);
-    *(int*) arg = third; 
+    localM.determinant += localM.matriz[0][2]*(localM.matriz[1][0]*localM.matriz[2][1]-localM.matriz[2][0]*localM.matriz[1][1]);
+    sem_post(&determinanteSem);
     return (void*) arg; 
 }
 void* calculateDeterminant(void* arg){
@@ -43,35 +45,29 @@ void* calculateDeterminant(void* arg){
     pthread_t first;
     pthread_t second;
     pthread_t third;
-    int* value;
-    int determinant = 0;
+    Matrix* value;
     pthread_create(&first, NULL, &determinantFirst, (void*)&localM);
     pthread_create(&second, NULL, &determinantSecond, (void*)&localM);
     pthread_create(&third, NULL, &determinantThird, (void*)&localM);
     pthread_join( first, (void **) &value );
-    determinant += *value;
     pthread_join( second, (void **) &value );
-    determinant += *value;
     pthread_join( third, (void **) &value );
-    determinant += *value;
-    *(int*) arg = determinant;   
-    return (void*) arg;
+    localM.determinant = value->determinant;
+    return NULL;
 }
 // FIN SECCION DE CALCULO DE DETERMINANTE
 // SECCION DE TRANSPUESTA 
 void* calculateTranspuesta(void* arg){
-    Matrix localM = *(Matrix*) arg;
-    // Se reserva memoria dinamica para la struct a devolver
-    Matrix *newM = (Matrix*) malloc(sizeof(Matrix));
+    Matrix *localM = (Matrix*) arg;
     for (int k = 0 ; k < 3 ; k++ )
     {
         for (int i = 0; i < 3; i++)
         {
-            newM->matriz[i][k]=localM.matriz[k][i];
+            localM->transpuest[i][k]=localM->matriz[k][i];
         }
         
     }
-    return (void*) newM;
+    return NULL;
 }
 // FIN DE SECCION TRANSPUESTA
 
@@ -79,29 +75,26 @@ void* calculateTranspuesta(void* arg){
 void* calculateAdjunta(void* arg)
 {
     
-    Matrix localM = *(Matrix*) arg;
-    Matrix *matrizAdj = (Matrix*) malloc(sizeof(Matrix));
+    Matrix *localM = (Matrix*) arg;
+    localM->adj[0][0] = ((localM->matriz[1][1] * localM->matriz[2][2]) - (localM->matriz[2][1] * localM->matriz[1][2]));
+    localM->adj[0][1] = -((localM->matriz[1][0] * localM->matriz[2][2]) - (localM->matriz[2][0] * localM->matriz[1][2]));
+    localM->adj[0][2] = ((localM->matriz[1][0] * localM->matriz[2][1]) - (localM->matriz[2][0] * localM->matriz[1][1]));
 
-    matrizAdj->matriz[0][0] = ((localM.matriz[1][1] * localM.matriz[2][2]) - (localM.matriz[2][1] * localM.matriz[1][2]));
-    matrizAdj->matriz[0][1] = -((localM.matriz[1][0] * localM.matriz[2][2]) - (localM.matriz[2][0] * localM.matriz[1][2]));
-    matrizAdj->matriz[0][2] = ((localM.matriz[1][0] * localM.matriz[2][1]) - (localM.matriz[2][0] * localM.matriz[1][1]));
+    localM->adj[1][0] = -((localM->matriz[0][1] * localM->matriz[2][2]) - (localM->matriz[2][1] * localM->matriz[0][2]));
+    localM->adj[1][1] = ((localM->matriz[0][0] * localM->matriz[2][2]) - (localM->matriz[2][0] * localM->matriz[0][2]));
+    localM->adj[1][2] = -((localM->matriz[0][0] * localM->matriz[2][1]) - (localM->matriz[2][0] * localM->matriz[0][1]));
 
-    matrizAdj->matriz[1][0] = -((localM.matriz[0][1] * localM.matriz[2][2]) - (localM.matriz[2][1] * localM.matriz[0][2]));
-    matrizAdj->matriz[1][1] = ((localM.matriz[0][0] * localM.matriz[2][2]) - (localM.matriz[2][0] * localM.matriz[0][2]));
-    matrizAdj->matriz[1][2] = -((localM.matriz[0][0] * localM.matriz[2][1]) - (localM.matriz[2][0] * localM.matriz[0][1]));
-
-    matrizAdj->matriz[2][0] = ((localM.matriz[0][1] * localM.matriz[1][2]) - (localM.matriz[1][1] * localM.matriz[0][2]));
-    matrizAdj->matriz[2][1] = -((localM.matriz[0][0] * localM.matriz[1][2]) - (localM.matriz[1][0] * localM.matriz[0][2]));
-    matrizAdj->matriz[2][2] = ((localM.matriz[0][0] * localM.matriz[1][1]) - (localM.matriz[1][0] * localM.matriz[0][1]));
-	
-
-    return (void*) matrizAdj; 
+    localM->adj[2][0] = ((localM->matriz[0][1] * localM->matriz[1][2]) - (localM->matriz[1][1] * localM->matriz[0][2]));
+    localM->adj[2][1] = -((localM->matriz[0][0] * localM->matriz[1][2]) - (localM->matriz[1][0] * localM->matriz[0][2]));
+    localM->adj[2][2] = ((localM->matriz[0][0] * localM->matriz[1][1]) - (localM->matriz[1][0] * localM->matriz[0][1]));
+	return NULL; 
 } 
 // FIN DE SECCION ADJUNTA
 
 
 int main()
 {
+    sem_init(&determinanteSem, 0, 1);
     pthread_t tDeterminant;
     pthread_t tTranspuest;
     pthread_t tAdjacent;
@@ -133,48 +126,49 @@ int main()
            perror("Failed to create the thread\n");
            return 1;
     }
-    if (pthread_join( tDeterminant, (void **) &determinant ) != 0 ){ //In case the join fails
+    if (pthread_join( tDeterminant, NULL ) != 0 ){ //In case the join fails
         perror("Failed to join the thread\n");
         return 2;
     }
-    if (pthread_join( tTranspuest, (void **) &trans ) != 0 ){ //In case the join fails
+    if (pthread_join( tTranspuest, NULL ) != 0 ){ //In case the join fails
         perror("Failed to join the thread\n");
         return 2;
     }
-    if (pthread_join( tAdjacent, (void **) &adj ) != 0 ){ //In case the join fails
+    if (pthread_join( tAdjacent, NULL ) != 0 ){ //In case the join fails
         perror("Failed to join the thread\n");
         return 2;
     }
-    cout << "Determinante: " << *determinant << endl;
-    
+    cout<<"Matriz ingresada:\n";
     // IMPRESION DE MATRIZ NORMAL
-    // for (int i = 0; i < 3; i++)
-    // {
-    //     for (int k = 0; k < 3; k++)
-    //     {
-    //         cout << matrixInput.matriz[i][k];
-    //     }
-    //     cout<<endl;
-    // } 
-    // cout<<endl;
+    for (int i = 0; i < 3; i++)
+    {
+        for (int k = 0; k < 3; k++)
+        {
+            cout << matrixInput.matriz[i][k]<<" ";
+        }
+        cout<<endl;
+    } 
+    cout<<endl;
+    cout << "Determinante: " << matrixInput.determinant << "\nMatriz transpuesta: \n";
     // IMPRESION DE MATRIZ TRANSPUESTA
-    // for (int i = 0; i < 3; i++)
-    // {
-    //     for (int k = 0; k < 3; k++)
-    //     {
-    //         cout << trans->matriz[i][k];
-    //     }
-    //     cout<<endl;
-    // }
+    for (int i = 0; i < 3; i++)
+    {
+        for (int k = 0; k < 3; k++)
+        {
+            cout << matrixInput.transpuest[i][k]<<" ";
+        }
+        cout<<endl;
+    }
+    cout<<"\nMatriz adjunta: \n";
     // IMPRESION DE MATRIZ ADJUNTA
-    // for (int i = 0; i < 3; i++)
-    // {
-    //     for (int j = 0; j < 3; j++)
-    //     {
-    //         cout << adj->matriz[i][j];
-    //     }
-    //     cout<<endl;
-    // }  
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            cout << matrixInput.adj[i][j]<<" ";
+        }
+        cout<<endl;
+    }  
     
     return 0;
 }
