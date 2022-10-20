@@ -241,7 +241,7 @@ int main()
     
     while (true)
     {
-        cout<<"Seleccione entre las siguientes opciones:\n1-Obtener la matriz ingresada\n2-Obtener el determinante\n3-Obtener la matriz transpuesta\n4-Obtener la matriz adjunta\n5-Obtener la matriz transpuesta adjunta\n6- Obtener la matriz inversa\n7-Ingrese otra matriz\n8- Salir\n";
+        cout<<"Seleccione entre las siguientes opciones:\n1-Obtener la matriz ingresada\n2-Obtener el determinante\n3-Obtener la matriz transpuesta\n4-Obtener la matriz adjunta\n5-Obtener la matriz transpuesta adjunta\n6-Obtener la matriz inversa\n7-Ingrese otra matriz\n8-Salir\n";
         cin>>option;
 
         switch (option)
