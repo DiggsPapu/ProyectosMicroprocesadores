@@ -286,8 +286,14 @@ int main()
             
         }
         else {
-            cout << "\nNo ingreso una opcion valida\n\n"; 
-
+            // while (option != 1 || option != 2 || option != 3 || option != 4 || option != 5 || option != 6 || option != 7)
+            // {
+            //     cout << "\nNo ingreso una opcion valida, por favor ingrese una opcion:\n\n";
+            //     cin >> option;
+            // }
+            // cin >> option;
+            cout << "\nNo ingreso una opcion valida, por favor ingrese una opcion:\n\n";
+            
         }
 
     }   
